@@ -1,0 +1,1 @@
+../../../skills/ai-council/SKILL.md
