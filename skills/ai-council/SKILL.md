@@ -36,11 +36,20 @@ Share this brief with all 3 council members so they are answering the same quest
 
 ## Step 2 — Invoke 3 council members in parallel
 
-Send the brief to all 3 subagents simultaneously in a single message:
+**Invocation mechanism:** Launch all 3 as parallel `Task` tool calls in a single message. Use `subagent_type` set to the agent name, pass the brief as the `prompt`, and set `readonly: true`.
 
-- `/council-gpt-54` — adversarial analyst: edge cases, failure modes, strongest objections
-- `/council-opus-46` — production quality advocate: correctness, clarity, maintainability
-- `/council-gemini-31-pro` — breadth analyst: alternatives, hidden assumptions, cross-cutting concerns
+```
+Task(subagent_type="council-gpt-54",    prompt=<brief>, readonly=true)
+Task(subagent_type="council-opus-46",   prompt=<brief>, readonly=true)
+Task(subagent_type="council-gemini-31-pro", prompt=<brief>, readonly=true)
+```
+
+**Preserve agent IDs:** Each `Task` call returns an agent ID. Store all 3 IDs — they are required for the escalation round in Step 4.
+
+Council member roles:
+- `council-gpt-54` — adversarial analyst: edge cases, failure modes, strongest objections
+- `council-opus-46` — production quality advocate: correctness, clarity, maintainability
+- `council-gemini-31-pro` — breadth analyst: alternatives, hidden assumptions, cross-cutting concerns
 
 Each subagent returns the same schema:
 - `## Answer`
@@ -49,9 +58,18 @@ Each subagent returns the same schema:
 - `## Counterargument`
 - `## Confidence`
 
+## Step 2b — Handle failures before judging
+
+After collecting responses, check for failures before proceeding:
+
+- **One model failed or returned malformed output:** Continue with the 2 valid responses. Note the missing perspective in the final verdict under "Models consulted". Do not abort.
+- **Malformed output (missing schema sections):** Attempt to extract usable content from the valid parts. If the response is too broken to use, treat it as a failure and proceed with the remaining models.
+- **Only 1 model responded:** Do not synthesize a "council verdict". Answer directly using that single response and inform the user that the council could not run with fewer than 2 perspectives.
+- **All 3 models failed:** Abort the council workflow and answer the user's question directly without council framing.
+
 ## Step 3 — Judge the outputs
 
-Score each response on these 5 dimensions (1-5 each):
+Score each response on these 5 dimensions (1–5 each):
 
 | Dimension | What to evaluate |
 |---|---|
@@ -61,24 +79,31 @@ Score each response on these 5 dimensions (1-5 each):
 | Practicality | Can this be implemented by the team without heroics? |
 | Simplicity | Is it the simplest solution that fully satisfies the requirements? |
 
-Note which model scored highest on each dimension.
+Note which model scored highest on each dimension. Include the scoring grid in the final verdict under `### Judge scores`.
 
 ## Step 4 — Escalation check (disagreement round)
 
-Before synthesizing, check: **do the 3 models materially disagree on a core point?**
+Before synthesizing, check: **do the models materially disagree on a core point?**
 
 A material disagreement is when:
 - Two or more models recommend fundamentally different approaches (not just different wording)
 - One model flags a CRITICAL or HIGH risk that the others did not mention
 - The confidence scores differ by 3 or more points on the same question
 
-If material disagreement exists:
+**If material disagreement exists:**
 1. Identify the exact point of disagreement in one sentence
-2. Send only that disagreement back to the 2 conflicting models as a focused follow-up: "Model A says X, Model B says Y — which is correct and why?"
+2. Resume the 2 conflicting models using their agent IDs from Step 2 — pass the disagreement as a follow-up message: "Model A says X, Model B says Y — which is correct and why?"
+
+   ```
+   Task(subagent_type="council-gpt-54", prompt=<disagreement>, resume=<agent_id_from_step2>)
+   ```
+
 3. Use the follow-up responses to resolve the conflict before synthesizing
 4. This second round is one exchange only — do not loop
 
-If no material disagreement: skip directly to synthesis.
+**If no material disagreement:** skip directly to synthesis.
+
+> **Why resume matters:** Subagents are stateless by default. Without `resume`, a follow-up invocation starts fresh with no memory of the first-round analysis or the original brief. Always use `resume` for escalation follow-ups.
 
 ## Step 5 — Synthesize the final answer
 
@@ -107,6 +132,15 @@ The final answer must synthesize, not average. Rules:
 ### Minority flags
 [Any important finding that only 1 model raised but is worth preserving]
 
+### Judge scores
+| Dimension    | GPT-5.4 | Opus 4.6 | Gemini 3.1 Pro |
+|---|---|---|---|
+| Correctness  | X | X | X |
+| Completeness | X | X | X |
+| Groundedness | X | X | X |
+| Practicality | X | X | X |
+| Simplicity   | X | X | X |
+
 ### Unresolved uncertainty
 [Anything the council could not resolve — only include if genuinely unresolved]
 
@@ -114,6 +148,7 @@ The final answer must synthesize, not average. Rules:
 - GPT-5.4 (adversarial analyst) — confidence: X/10
 - Claude Opus 4.6 (production quality) — confidence: X/10
 - Gemini 3.1 Pro (breadth analyst) — confidence: X/10
+[Note any model that failed to respond]
 ```
 
 ## Quality guardrails
@@ -121,7 +156,7 @@ The final answer must synthesize, not average. Rules:
 - Every council member must use "ASSUMING:" for assumptions and "UNKNOWN:" for gaps — do not let them hide uncertainty in confident-sounding prose
 - For code-review mode: bugs and regressions must come before style findings in the final output
 - For architecture mode: the final answer must include trade-offs and a brief "why not the alternatives" section
-- Keep each council member's output focused — if a response is longer than ~400 words, ask for a shorter version before judging
+- If a council member's response is excessively long, synthesize their key points directly rather than requesting a shorter version — do not add a round-trip just for brevity
 - No nested councils: this skill is orchestrated by the parent session only
 
 ## Example invocation
@@ -129,8 +164,9 @@ The final answer must synthesize, not average. Rules:
 User: "Review this PR — is the approach correct and what could go wrong?"
 
 1. Normalize into a brief with MODE: code-review
-2. Send brief to all 3 council members in parallel
-3. Collect structured outputs
-4. Check for material disagreements (escalate if needed)
-5. Synthesize final Council Verdict
-6. Present verdict to user
+2. Launch 3 parallel Task calls (council-gpt-54, council-opus-46, council-gemini-31-pro), store agent IDs
+3. Check for failures (Step 2b)
+4. Score outputs (Step 3)
+5. Check for material disagreements — if found, resume conflicting agents with disagreement (Step 4)
+6. Synthesize final Council Verdict
+7. Present verdict to user

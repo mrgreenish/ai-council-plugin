@@ -5,5 +5,19 @@
   "author": {
     "name": "Filip van Harreveld"
   },
-  "keywords": ["ai-council", "code-review", "architecture", "multi-model", "quality"]
+  "license": "MIT",
+  "repository": "https://github.com/filipvanharreveld/ai-council-plugin",
+  "homepage": "https://github.com/filipvanharreveld/ai-council-plugin#readme",
+  "keywords": ["ai-council", "code-review", "architecture", "multi-model", "quality"],
+  "agents": [
+    "agents/council-gpt-54.md",
+    "agents/council-opus-46.md",
+    "agents/council-gemini-31-pro.md"
+  ],
+  "skills": [
+    "skills/ai-council/SKILL.md"
+  ],
+  "commands": [
+    "commands/ai-council.md"
+  ]
 }
