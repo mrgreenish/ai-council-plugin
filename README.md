@@ -1,2 +1,258 @@
-# ai-council-plugin
-ai council plugin for cursor and claude
+# AI Council Plugin
+
+A multi-model review council for high-stakes decisions. Three specialist AI models run in parallel, each with a different analytical role, and the parent session synthesizes the best final answer.
+
+## What it does
+
+Instead of asking one model a hard question, the council asks three simultaneously:
+
+```
+Your question
+     │
+     ▼
+AI Council Skill (normalizes prompt into a brief)
+     │
+     ├──► council-gpt-54         (GPT-5.4 — adversarial analyst)
+     ├──► council-opus-46        (Claude Opus 4.6 — production quality)
+     └──► council-gemini-31-pro  (Gemini 3.1 Pro — breadth & alternatives)
+                │
+                ▼
+     Parent session (judge + synthesis)
+                │
+                ▼
+     Council Verdict (best final answer)
+```
+
+## Council members
+
+| Agent | Model | Role |
+|---|---|---|
+| `council-gpt-54` | `gpt-5.4` | Adversarial analyst — edge cases, failure modes, strongest objections |
+| `council-opus-46` | `claude-opus-4-6` | Production quality advocate — correctness, clarity, maintainability |
+| `council-gemini-31-pro` | `gemini-3.1-pro` | Breadth analyst — alternatives, hidden assumptions, cross-cutting concerns |
+
+All three return the same structured schema so the judge can compare them directly:
+
+```
+## Answer
+## Assumptions   (prefixed with "ASSUMING:")
+## Risks         (ordered by severity: CRITICAL / HIGH / MEDIUM / LOW)
+## Counterargument
+## Confidence    (1-10 score with justification)
+```
+
+## When to use it
+
+| Use it for | Skip it for |
+|---|---|
+| Architecture decisions | Simple lookups |
+| Code review | Quick bug fixes |
+| Ambiguous implementation choices | Formatting changes |
+| "Best possible answer" requests | Anything obvious |
+
+## Installation
+
+### Cursor — Option A: copy into a project (recommended, works immediately)
+
+Copy the council files directly into your project's `.cursor/` directory. This is the fastest way to get started and requires no plugin setup.
+
+```bash
+# From the root of your project, run:
+git clone https://github.com/your-username/ai-council-plugin.git /tmp/ai-council-plugin
+
+mkdir -p .cursor/agents .cursor/skills/ai-council .cursor/commands
+
+cp /tmp/ai-council-plugin/agents/council-gpt-54.md .cursor/agents/
+cp /tmp/ai-council-plugin/agents/council-opus-46.md .cursor/agents/
+cp /tmp/ai-council-plugin/agents/council-gemini-31-pro.md .cursor/agents/
+cp /tmp/ai-council-plugin/skills/ai-council/SKILL.md .cursor/skills/ai-council/
+cp /tmp/ai-council-plugin/commands/ai-council.md .cursor/commands/
+
+rm -rf /tmp/ai-council-plugin
+```
+
+After copying, restart or reload your Cursor window. The council is immediately available in that project.
+
+To update later, re-run the copy commands with the latest version of the repo.
+
+To uninstall, delete the copied files:
+
+```bash
+rm .cursor/agents/council-gpt-54.md
+rm .cursor/agents/council-opus-46.md
+rm .cursor/agents/council-gemini-31-pro.md
+rm -rf .cursor/skills/ai-council
+rm .cursor/commands/ai-council.md
+```
+
+---
+
+### Cursor — Option B: install as a global user plugin
+
+Install the council once and use it across all your projects without copying files per repo.
+
+**Step 1: clone the repo**
+
+```bash
+git clone https://github.com/your-username/ai-council-plugin.git ~/cursor-plugins/ai-council
+```
+
+**Step 2: open Cursor settings**
+
+Go to `Cursor → Settings → Plugins` (or open the command palette and search for `Plugins`).
+
+**Step 3: add the plugin**
+
+Click `Add plugin from local path` and select the folder you cloned:
+
+```
+~/cursor-plugins/ai-council
+```
+
+Cursor reads the `.cursor-plugin/plugin.json` manifest and auto-discovers the `agents/`, `skills/`, and `commands/` folders.
+
+**Step 4: reload Cursor**
+
+Restart or reload the window. The council is now available globally in all projects.
+
+**To update:**
+
+```bash
+cd ~/cursor-plugins/ai-council
+git pull
+```
+
+Then reload Cursor.
+
+**To uninstall:**
+
+Remove the plugin from `Cursor → Settings → Plugins`, then delete the cloned folder.
+
+---
+
+After installing via either option, the following are available:
+- `/ai-council [your question]` — main command entrypoint
+- `@ai-council` — attach the skill as context
+- `/council-gpt-54`, `/council-opus-46`, `/council-gemini-31-pro` — individual council members
+
+### Claude (install script)
+
+Run the installer to copy the council files into your Claude user directories:
+
+```bash
+bash scripts/install-claude.sh
+```
+
+This installs:
+- `skills/ai-council/SKILL.md` → `~/.claude/skills/ai-council/SKILL.md`
+- `agents/council-gpt-54.md` → `~/.claude/agents/council-gpt-54.md`
+- `agents/council-opus-46.md` → `~/.claude/agents/council-opus-46.md`
+- `agents/council-gemini-31-pro.md` → `~/.claude/agents/council-gemini-31-pro.md`
+
+To uninstall, remove those files manually:
+
+```bash
+rm -rf ~/.claude/skills/ai-council
+rm ~/.claude/agents/council-gpt-54.md
+rm ~/.claude/agents/council-opus-46.md
+rm ~/.claude/agents/council-gemini-31-pro.md
+```
+
+To update, re-run the install script after pulling the latest version of this repo.
+
+## Usage
+
+### Recommended: `/ai-council` command
+
+```
+/ai-council should we add a caching layer between the API and the frontend?
+/ai-council review this diff for bugs and missing tests
+/ai-council what is the best approach for this implementation?
+```
+
+The command automatically:
+- infers the mode (`architecture`, `code-review`, or `implementation-choice`) from your request
+- uses any attached files, selected code, or open diff as context
+- delegates to the `ai-council` skill for the full workflow
+
+### Architecture examples
+
+```
+/ai-council Should we use a monorepo or separate repos for this service split?
+/ai-council Where should this business logic live — in the API layer or the frontend?
+/ai-council What are the trade-offs between event-driven and request-response for this feature?
+```
+
+### Code review examples
+
+```
+/ai-council Review the selected code for bugs, missing edge cases, and test gaps.
+/ai-council Is this change safe to merge? Focus on regressions and security.
+/ai-council Does this implementation follow the patterns already established in this codebase?
+```
+
+### Implementation choice examples
+
+```
+/ai-council Should we use server-side rendering or client-side fetching for this page?
+/ai-council Is a new API endpoint the right abstraction here, or should this live in the client?
+/ai-council Between these two approaches, which is simpler and more maintainable long-term?
+```
+
+### Individual council members
+
+Invoke one perspective directly when you want a specific lens:
+
+```
+/council-gpt-54 What are the worst failure modes if we ship this as-is?
+/council-opus-46 Is this code maintainable for the team six months from now?
+/council-gemini-31-pro What alternatives did we not consider for this architecture?
+```
+
+## How it works step by step
+
+1. **Normalize** — The skill rewrites your question into a structured brief (task, constraints, deliverable, rubric)
+2. **Parallel run** — All 3 council members receive the brief simultaneously
+3. **Judge** — The parent session scores each output on correctness, completeness, groundedness, practicality, simplicity
+4. **Escalation check** — If models materially disagree, a focused second round resolves the conflict
+5. **Synthesis** — The final Council Verdict adopts consensus, preserves minority risks, and calls out unresolved uncertainty
+
+## Final output format
+
+```
+## Council Verdict
+
+### Recommendation
+### Consensus points
+### Key risks
+### Minority flags
+### Unresolved uncertainty
+### Models consulted (with confidence scores)
+```
+
+## Model availability notes
+
+- `gpt-5.4` and `claude-opus-4-6` require **Max Mode** on request-based Cursor plans
+- `gemini-3.1-pro` is available on standard plans
+- If a model is unavailable on your plan, Cursor falls back to a compatible model automatically
+- The parent session (judge + synthesis) uses whatever model your active chat is running
+
+## File layout
+
+```
+ai-council-plugin/
+├── .cursor-plugin/
+│   └── plugin.json          # Cursor plugin manifest
+├── agents/
+│   ├── council-gpt-54.md    # GPT-5.4 adversarial analyst
+│   ├── council-opus-46.md   # Claude Opus 4.6 production quality
+│   └── council-gemini-31-pro.md  # Gemini 3.1 Pro breadth analyst
+├── skills/
+│   └── ai-council/
+│       └── SKILL.md         # Canonical orchestration workflow
+├── commands/
+│   └── ai-council.md        # Thin /ai-council command entrypoint
+├── scripts/
+│   └── install-claude.sh    # Claude install script
+└── README.md
+```

@@ -1,0 +1,9 @@
+{
+  "name": "ai-council",
+  "version": "0.1.0",
+  "description": "Three-model AI council for high-stakes architecture decisions and code review. Runs GPT-5.4, Claude Opus 4.6, and Gemini 3.1 Pro in parallel, then synthesizes the best final answer.",
+  "author": {
+    "name": "Filip van Harreveld"
+  },
+  "keywords": ["ai-council", "code-review", "architecture", "multi-model", "quality"]
+}
