@@ -190,10 +190,7 @@ After installing via any method, confirm the council is working before using it 
 /ai-council what is the best approach for this implementation?
 ```
 
-The command automatically:
-- infers the mode (`architecture`, `code-review`, or `implementation-choice`) from your request
-- uses any attached files, selected code, or open diff as context
-- delegates to the `ai-council` skill for the full workflow
+The command passes your request and any attached context to the `ai-council` skill, which handles the full workflow: mode inference, scope check, parallel council invocation, judging, escalation, and synthesis.
 
 ### Architecture examples
 
@@ -231,14 +228,17 @@ Invoke one perspective directly when you want a specific lens:
 
 ## How it works step by step
 
-1. **Normalize** — The skill rewrites your question into a structured brief (task, constraints, deliverable, rubric)
-2. **Parallel run** — All 3 council members are launched as parallel subagents simultaneously; their agent IDs are preserved
-3. **Failure check** — If a model fails or returns malformed output, the council continues with the remaining responses (minimum 2 to produce a verdict)
-4. **Judge** — The parent session scores each output on correctness, completeness, groundedness, practicality, simplicity; scores appear in the final verdict
-5. **Escalation check** — If models materially disagree, the conflicting agents are *resumed* (preserving their first-round context) with a focused follow-up question
-6. **Synthesis** — The final Council Verdict adopts consensus, preserves minority risks, and calls out unresolved uncertainty
+1. **Preflight** — The skill infers the mode (`architecture`, `code-review`, or `implementation-choice`) from your request. If the request is ambiguous, it asks one short clarifying question. If the attached context is too large or covers too many independent concerns to review groundedly, it asks you to narrow the scope before proceeding.
+2. **Normalize** — Your question is rewritten into a structured brief (task, constraints, deliverable, rubric, mode). Attached code or diffs are included as primary context.
+3. **Parallel run** — All 3 council members are launched as parallel subagents simultaneously; their agent IDs are preserved for the escalation round.
+4. **Failure check** — If a model fails or returns malformed output, the council continues with the remaining responses (minimum 2 to produce a verdict). A partial council is clearly labeled in the verdict.
+5. **Judge** — The parent session scores each output on correctness, completeness, groundedness, practicality, and simplicity; scores appear in the final verdict.
+6. **Escalation check** — If models materially disagree (different recommendations, contradictory correctness claims, or an unaddressed CRITICAL/HIGH risk), each conflicting agent is *resumed* with a focused follow-up question in one parallel round. If the disagreement round does not converge, the conflict is surfaced explicitly under "Unresolved uncertainty".
+7. **Synthesis** — The final Council Verdict adopts consensus, preserves minority risks, and calls out unresolved uncertainty.
 
 ## Final output format
+
+**Full council (all 3 models responded):**
 
 ```
 ## Council Verdict
@@ -257,6 +257,31 @@ Invoke one perspective directly when you want a specific lens:
 | Simplicity   | X | X | X |
 ### Unresolved uncertainty
 ### Models consulted (with confidence scores)
+```
+
+**Partial council (one model unavailable):**
+
+When a model fails to respond, the verdict is labeled at the top and the judge table uses `—` for the missing model's column:
+
+```
+## Council Verdict
+
+> Partial council: [Missing model] did not respond. Verdict is based on 2 of 3 perspectives.
+
+### Recommendation
+### Consensus points  (what both responding models agreed on)
+### Key risks
+### Minority flags
+### Judge scores
+| Dimension    | [Model A] | [Model B] | [Missing model] |
+|---|---|---|---|
+| Correctness  | X | X | — |
+| Completeness | X | X | — |
+| Groundedness | X | X | — |
+| Practicality | X | X | — |
+| Simplicity   | X | X | — |
+### Unresolved uncertainty
+### Models consulted
 ```
 
 ## Model availability notes
