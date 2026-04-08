@@ -18,6 +18,8 @@ Infer the mode automatically from the request:
 Then follow the full `ai-council` skill workflow:
 1. Normalize the request into a structured brief
 2. Invoke all 3 council members in parallel
-3. Judge outputs on correctness, completeness, groundedness, practicality, and simplicity
-4. Run the escalation round if models materially disagree
-5. Synthesize and present the final Council Verdict
+3. Verify model identities — warn if duplicates detected
+4. Peer review — each model anonymously scores the other two (skipped for implementation-choice mode)
+5. Judge outputs using both parent assessment and peer scores
+6. Run the escalation round if models materially disagree
+7. Synthesize and present the final Council Verdict

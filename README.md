@@ -1,25 +1,28 @@
 # AI Council Plugin
 
-A multi-model review council for high-stakes decisions. Three specialist AI models run in parallel, each with a different analytical role, and the parent session synthesizes the best final answer.
+A multi-model review council for high-stakes decisions. Three specialist AI models run in parallel, each with a different analytical role. They peer-review each other's outputs anonymously, and the parent session synthesizes the best final answer.
 
 ## What it does
 
-Instead of asking one model a hard question, the council asks three simultaneously:
+Instead of asking one model a hard question, the council asks three simultaneously, then has them review each other:
 
 ```
 Your question
-     │
-     ▼
+     |
+     v
 AI Council Skill (normalizes prompt into a brief)
-     │
-     ├──► council-gpt-54         (GPT-5.4 — adversarial analyst)
-     ├──► council-opus-46        (Claude Opus 4.6 — production quality)
-     └──► council-gemini-31-pro  (Gemini 3.1 Pro — breadth & alternatives)
-                │
-                ▼
-     Parent session (judge + synthesis)
-                │
-                ▼
+     |
+     |--- council-gpt-54         (GPT-5.4 -- adversarial analyst)
+     |--- council-opus-46        (Claude Opus 4.6 -- production quality)
+     '--- council-gemini-31-pro  (Gemini 3.1 Pro -- breadth & alternatives)
+                |
+                v
+     Peer Review (each model anonymously scores the other two)
+                |
+                v
+     Parent session (judge + synthesis, informed by peer scores)
+                |
+                v
      Council Verdict (best final answer)
 ```
 
@@ -27,13 +30,14 @@ AI Council Skill (normalizes prompt into a brief)
 
 | Agent | Model | Role |
 |---|---|---|
-| `council-gpt-54` | `gpt-5.4` | Adversarial analyst — edge cases, failure modes, strongest objections |
-| `council-opus-46` | `claude-opus-4-6` | Production quality advocate — correctness, clarity, maintainability |
-| `council-gemini-31-pro` | `gemini-3.1-pro` | Breadth analyst — alternatives, hidden assumptions, cross-cutting concerns |
+| `council-gpt-54` | `gpt-5.4` | Adversarial analyst -- edge cases, failure modes, strongest objections |
+| `council-opus-46` | `claude-opus-4-6` | Production quality advocate -- correctness, clarity, maintainability |
+| `council-gemini-31-pro` | `gemini-3.1-pro` | Breadth analyst -- alternatives, hidden assumptions, cross-cutting concerns |
 
 All three return the same structured schema so the judge can compare them directly:
 
 ```
+## Model Identity
 ## Answer
 ## Assumptions   (prefixed with "ASSUMING:")
 ## Risks         (ordered by severity: CRITICAL / HIGH / MEDIUM / LOW)
@@ -52,7 +56,7 @@ All three return the same structured schema so the judge can compare them direct
 
 ## Installation
 
-### Cursor — Option A: copy into a project (recommended, works immediately)
+### Cursor -- Option A: copy into a project (recommended, works immediately)
 
 Copy the council files directly into your project's `.cursor/` directory. This is the fastest way to get started and requires no plugin setup.
 
@@ -87,7 +91,7 @@ rm .cursor/commands/ai-council.md
 
 ---
 
-### Cursor — Option B: install as a global user plugin
+### Cursor -- Option B: install as a global user plugin
 
 Install the council once and use it across all your projects without copying files per repo.
 
@@ -99,7 +103,7 @@ git clone https://github.com/filipvanharreveld/ai-council-plugin.git ~/cursor-pl
 
 **Step 2: open Cursor settings**
 
-Go to `Cursor → Settings → Plugins` (or open the command palette and search for `Plugins`).
+Go to `Cursor > Settings > Plugins` (or open the command palette and search for `Plugins`).
 
 **Step 3: add the plugin**
 
@@ -126,14 +130,14 @@ Then reload Cursor.
 
 **To uninstall:**
 
-Remove the plugin from `Cursor → Settings → Plugins`, then delete the cloned folder.
+Remove the plugin from `Cursor > Settings > Plugins`, then delete the cloned folder.
 
 ---
 
 After installing via either option, the following are available:
-- `/ai-council [your question]` — main command entrypoint
-- `@ai-council` — attach the skill as context
-- `/council-gpt-54`, `/council-opus-46`, `/council-gemini-31-pro` — individual council members
+- `/ai-council [your question]` -- main command entrypoint
+- `@ai-council` -- attach the skill as context
+- `/council-gpt-54`, `/council-opus-46`, `/council-gemini-31-pro` -- individual council members
 
 ### Claude (install script)
 
@@ -144,10 +148,10 @@ bash scripts/install-claude.sh
 ```
 
 This installs:
-- `skills/ai-council/SKILL.md` → `~/.claude/skills/ai-council/SKILL.md`
-- `agents/council-gpt-54.md` → `~/.claude/agents/council-gpt-54.md`
-- `agents/council-opus-46.md` → `~/.claude/agents/council-opus-46.md`
-- `agents/council-gemini-31-pro.md` → `~/.claude/agents/council-gemini-31-pro.md`
+- `skills/ai-council/SKILL.md` -> `~/.claude/skills/ai-council/SKILL.md`
+- `agents/council-gpt-54.md` -> `~/.claude/agents/council-gpt-54.md`
+- `agents/council-opus-46.md` -> `~/.claude/agents/council-opus-46.md`
+- `agents/council-gemini-31-pro.md` -> `~/.claude/agents/council-gemini-31-pro.md`
 
 > **Note:** The `/ai-council` slash command is a Cursor-only feature. Claude Code does not support command files in the same way. After installing, invoke the council by asking Claude to use the `ai-council` skill, or invoke a council member directly: `/council-gpt-54`, `/council-opus-46`, `/council-gemini-31-pro`.
 
@@ -166,19 +170,19 @@ To update, re-run the install script after pulling the latest version of this re
 
 After installing via any method, confirm the council is working before using it on a real task:
 
-1. **Test a single council member** — invoke one member with a simple question:
+1. **Test a single council member** -- invoke one member with a simple question:
    ```
    /council-gpt-54 What is 2+2? (test only)
    ```
-   Check the response header or model attribution to confirm it is running on GPT-5.4 and not a fallback model.
+   Check the response header or model attribution to confirm it is running on GPT-5.4 and not a fallback model. The response will include a `## Model Identity` section that reports the model's actual identity.
 
-2. **Repeat for the other two members** — run the same check for `council-opus-46` (expect Claude Opus 4.6) and `council-gemini-31-pro` (expect Gemini 3.1 Pro).
+2. **Repeat for the other two members** -- run the same check for `council-opus-46` (expect Claude Opus 4.6) and `council-gemini-31-pro` (expect Gemini 3.1 Pro).
 
-3. **Confirm all 3 are distinct models** — if all three responses come from the same model, you are running on a fallback. Check that your plan supports Max Mode (required for GPT-5.4 and Claude Opus 4.6).
+3. **Confirm all 3 are distinct models** -- if all three responses come from the same model, you are running on a fallback. Check that your plan supports Max Mode (required for GPT-5.4 and Claude Opus 4.6).
 
-4. **Run a full council** — try a real question with `/ai-council` (Cursor) or by asking the AI to use the `ai-council` skill (Claude). Confirm the verdict includes responses from all 3 perspectives.
+4. **Run a full council** -- try a real question with `/ai-council` (Cursor) or by asking the AI to use the `ai-council` skill (Claude). Confirm the verdict includes responses from all 3 perspectives.
 
-> **Model availability:** `gpt-5.4` and `claude-opus-4-6` require **Max Mode** on request-based Cursor plans. `gemini-3.1-pro` is available on standard plans. If a model is unavailable, Cursor falls back silently — use the verification steps above to detect this.
+> **Automatic verification:** The council workflow now checks model identities automatically. If two or more agents report the same model, you will see a warning in the output. This does not replace the manual check above for initial setup, but it catches fallback issues during normal use.
 
 ## Usage
 
@@ -199,7 +203,7 @@ The command automatically:
 
 ```
 /ai-council Should we use a monorepo or separate repos for this service split?
-/ai-council Where should this business logic live — in the API layer or the frontend?
+/ai-council Where should this business logic live -- in the API layer or the frontend?
 /ai-council What are the trade-offs between event-driven and request-response for this feature?
 ```
 
@@ -231,12 +235,14 @@ Invoke one perspective directly when you want a specific lens:
 
 ## How it works step by step
 
-1. **Normalize** — The skill rewrites your question into a structured brief (task, constraints, deliverable, rubric)
-2. **Parallel run** — All 3 council members are launched as parallel subagents simultaneously; their agent IDs are preserved
-3. **Failure check** — If a model fails or returns malformed output, the council continues with the remaining responses (minimum 2 to produce a verdict)
-4. **Judge** — The parent session scores each output on correctness, completeness, groundedness, practicality, simplicity; scores appear in the final verdict
-5. **Escalation check** — If models materially disagree, the conflicting agents are *resumed* (preserving their first-round context) with a focused follow-up question
-6. **Synthesis** — The final Council Verdict adopts consensus, preserves minority risks, and calls out unresolved uncertainty
+1. **Normalize** -- The skill rewrites your question into a structured brief (task, constraints, deliverable, rubric, mode, peer review setting)
+2. **Parallel run** -- All 3 council members are launched as parallel subagents simultaneously; their agent IDs are preserved
+3. **Model verification** -- Each agent reports its actual model identity; if duplicates are detected (indicating silent fallback), a warning is surfaced
+4. **Failure check** -- If a model fails or returns malformed output, the council continues with the remaining responses (minimum 2 to produce a verdict)
+5. **Peer review** -- Each model anonymously scores the other two responses on 5 dimensions, identifies blind spots, and signals whether another response is better than its own (skipped for implementation-choice mode)
+6. **Judge** -- The parent session scores each output on correctness, completeness, groundedness, practicality, simplicity; peer scores are shown alongside parent scores in the final verdict
+7. **Escalation check** -- If models materially disagree, the conflicting agents are *resumed* (preserving their first-round context) with a focused follow-up question
+8. **Synthesis** -- The final Council Verdict adopts consensus, preserves minority risks, incorporates peer review insights, and calls out unresolved uncertainty
 
 ## Final output format
 
@@ -247,24 +253,94 @@ Invoke one perspective directly when you want a specific lens:
 ### Consensus points
 ### Key risks
 ### Minority flags
+### Peer review insights (omitted if peer review did not run)
 ### Judge scores
-| Dimension    | GPT-5.4 | Opus 4.6 | Gemini 3.1 Pro |
+| Dimension    | GPT-5.4        | Opus 4.6       | Gemini 3.1 Pro |
 |---|---|---|---|
-| Correctness  | X | X | X |
-| Completeness | X | X | X |
-| Groundedness | X | X | X |
-| Practicality | X | X | X |
-| Simplicity   | X | X | X |
+| Correctness  | X (peer: X)    | X (peer: X)    | X (peer: X)    |
+| Completeness | X (peer: X)    | X (peer: X)    | X (peer: X)    |
+| Groundedness | X (peer: X)    | X (peer: X)    | X (peer: X)    |
+| Practicality | X (peer: X)    | X (peer: X)    | X (peer: X)    |
+| Simplicity   | X (peer: X)    | X (peer: X)    | X (peer: X)    |
 ### Unresolved uncertainty
 ### Models consulted (with confidence scores)
+```
+
+## Example council verdict
+
+> The following is a condensed example showing what a real council verdict looks like. Details are abbreviated for brevity.
+
+**User question:** `/ai-council Should we add a Redis caching layer between the API and the database?`
+
+**Mode:** architecture | **Peer review:** yes
+
+**What each model said (summarized):**
+
+- **GPT-5.4** recommended adding Redis but flagged cache invalidation as a CRITICAL risk, warning that stale data in the user permissions cache could cause authorization bugs. Confidence: 6/10.
+- **Opus 4.6** recommended Redis with a TTL-based strategy, emphasizing it fits the existing infrastructure patterns and is straightforward to operate. Flagged the lack of a cache monitoring story as a HIGH risk. Confidence: 8/10.
+- **Gemini 3.1 Pro** recommended considering HTTP-level caching (CDN or reverse proxy) as an alternative before committing to Redis, noting that Redis adds operational complexity that may not be justified by current traffic. Confidence: 7/10.
+
+**Peer review highlights:**
+
+- Both GPT-5.4 and Gemini 3.1 Pro marked Opus 4.6's response as "BETTER THAN MINE" for practicality
+- GPT-5.4 identified a blind spot in Gemini's response: the CDN alternative does not help with authenticated/personalized endpoints
+- Gemini flagged that GPT-5.4's invalidation concerns, while valid, assumed a write-heavy workload that may not match the actual use case
+
+**Council verdict:**
+
+```
+## Council Verdict
+
+### Recommendation
+Add Redis caching for the read-heavy public endpoints (product catalog, search results).
+Defer caching for authenticated endpoints until the invalidation strategy is validated
+with the team. Start with a 60-second TTL and add cache-hit/miss metrics from day one.
+
+### Consensus points
+- Caching is justified given current API response times and read/write ratio
+- TTL-based expiration is the right starting point (not event-driven invalidation)
+- Monitoring and metrics must ship with the cache, not after
+
+### Key risks
+- CRITICAL (GPT-5.4): Cache invalidation for user permissions could cause stale
+  authorization decisions. Mitigated by excluding auth endpoints from initial rollout.
+- HIGH (Opus 4.6): No cache monitoring story — stale data failures will be invisible
+  without hit/miss metrics and alerting.
+
+### Minority flags
+- Gemini 3.1 Pro raised HTTP-level caching as a simpler alternative. This is valid for
+  public endpoints but does not apply to authenticated routes. Worth revisiting if Redis
+  operational burden becomes a concern.
+
+### Peer review insights
+- Opus 4.6's response was rated strongest on practicality by both peers
+- GPT-5.4's cache invalidation concern was validated by peers but scoped: it matters most
+  for auth/personalized data, less for public read endpoints
+- Gemini's CDN alternative was noted as a valid fallback but not a replacement for the
+  primary use case
+
+### Judge scores
+| Dimension    | GPT-5.4      | Opus 4.6     | Gemini 3.1 Pro |
+|---|---|---|---|
+| Correctness  | 4 (peer: 4)  | 5 (peer: 4.5)| 4 (peer: 3.5) |
+| Completeness | 3 (peer: 3.5)| 4 (peer: 4.5)| 4 (peer: 4)   |
+| Groundedness | 4 (peer: 4)  | 5 (peer: 4.5)| 3 (peer: 3)   |
+| Practicality | 3 (peer: 3)  | 5 (peer: 5)  | 4 (peer: 3.5) |
+| Simplicity   | 3 (peer: 3.5)| 4 (peer: 4)  | 4 (peer: 4)   |
+
+### Models consulted
+- GPT-5.4 (adversarial analyst) -- confidence: 6/10
+- Claude Opus 4.6 (production quality) -- confidence: 8/10
+- Gemini 3.1 Pro (breadth analyst) -- confidence: 7/10
 ```
 
 ## Model availability notes
 
 - `gpt-5.4` and `claude-opus-4-6` require **Max Mode** on request-based Cursor plans
 - `gemini-3.1-pro` is available on standard plans
-- If a model is unavailable on your plan, Cursor falls back to a compatible model — use the verification steps above to confirm you are not running 3 copies of the same fallback model
+- If a model is unavailable on your plan, Cursor falls back to a compatible model -- the council now detects this automatically via model identity verification and warns you in the output
 - The parent session (judge + synthesis) uses whatever model your active chat is running
+- For best results, use a strong model (Opus or GPT-5.4 class) as your parent session when running the full council
 
 ## File layout
 
@@ -285,3 +361,22 @@ ai-council-plugin/
 │   └── install-claude.sh    # Claude install script
 └── README.md
 ```
+
+## Design philosophy and trade-offs
+
+This plugin is entirely markdown -- no code, no dependencies, no build step. This is a deliberate choice with real trade-offs:
+
+**Strengths of the zero-code approach:**
+- Works immediately in any Cursor or Claude Code project without installation complexity
+- No dependency management, no version conflicts, no build pipeline
+- Every part of the system is human-readable and editable
+- Portable across Cursor and Claude Code with minimal adaptation
+
+**Limitations:**
+- No programmatic validation of agent responses -- the parent session must handle malformed output by following the failure-handling instructions in the workflow
+- No retry logic beyond what the host platform provides
+- Schema compliance depends on the models following instructions, which they occasionally do not
+- The orchestration quality depends on the parent session's model -- a weaker parent model may not follow the multi-step workflow as precisely (the peer review stage mitigates this by providing structured scoring signal the parent can lean on)
+- If the host platform changes how subagents or skills are loaded, the plugin could break without any code to debug
+
+These are acceptable trade-offs for a plugin that prioritizes accessibility and simplicity. If you need stronger guarantees, consider wrapping the council in a code-based orchestrator that calls the same agents programmatically.
