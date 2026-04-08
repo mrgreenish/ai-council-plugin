@@ -110,7 +110,7 @@ This check is informational only — it does not abort the workflow. The user de
 
 After collecting responses, check for failures before proceeding:
 
-- **One model failed or returned malformed output:** Continue with the 2 valid responses as a **partial council**. Note the missing model under "Models consulted" in the final verdict. Follow the partial-council rules in Step 5 and the Final output format.
+- **One model failed or returned malformed output:** Continue with the 2 valid responses as a **partial council**. Note the missing model under "Models consulted" in the final verdict. Follow the partial-council rules in Step 6 and the Final output format.
 - **Malformed output (missing schema sections):** Attempt to extract usable content from the valid parts. If the response is too broken to use, treat it as a failure and proceed with the remaining models.
 - **Only 1 model responded:** Do not synthesize a "council verdict". Answer directly using that single response and inform the user that the council could not run with fewer than 2 perspectives.
 - **All 3 models failed:** Abort the council workflow and answer the user's question directly without council framing.
@@ -131,19 +131,19 @@ Strip model names and any self-identifying information from each response. Then:
 
 ### 3b — Send peer review requests in parallel
 
-Each model reviews only the responses that are NOT its own. Use the global A/B/C mapping only to exclude the reviewer's own response. Then relabel the remaining two responses **locally** as `Response A` and `Response B` inside that reviewer's prompt, regardless of their global labels. Launch all 3 as parallel `Task` calls using `resume` to preserve first-round context:
+Each model reviews only the responses that are NOT its own. Include the two non-reviewer responses under their **actual global labels** from Step 3a (e.g., if the reviewer's own response is globally `Response B`, send `Response A` and `Response C` with those exact labels). This way the reviewer's output directly references the global labels, and the orchestrator can attribute peer scores without any secondary mapping. Launch all 3 as parallel `Task` calls using `resume` to preserve first-round context:
 
 ```
 Task(subagent_type="council-gpt-54",
-     prompt=<peer_review_brief with the two non-GPT responses relabeled locally as Response A + Response B>,
+     prompt=<peer_review_brief with the two non-GPT responses under their global A/B/C labels>,
      resume=<agent_id_gpt>)
 
 Task(subagent_type="council-opus-46",
-     prompt=<peer_review_brief with the two non-Opus responses relabeled locally as Response A + Response B>,
+     prompt=<peer_review_brief with the two non-Opus responses under their global A/B/C labels>,
      resume=<agent_id_opus>)
 
 Task(subagent_type="council-gemini-31-pro",
-     prompt=<peer_review_brief with the two non-Gemini responses relabeled locally as Response A + Response B>,
+     prompt=<peer_review_brief with the two non-Gemini responses under their global A/B/C labels>,
      resume=<agent_id_gemini>)
 ```
 
@@ -151,14 +151,13 @@ Task(subagent_type="council-gemini-31-pro",
 
 ### 3c — Peer review brief template
 
-Send each reviewer the following prompt. The labels `Response A` and `Response B` are **local to that review only** and do not need to match the orchestrator's global A/B/C mapping:
+Send each reviewer the following prompt. Replace `[X]` and `[Y]` with the actual global labels for the two responses being reviewed (the labels that are NOT the reviewer's own from the Step 3a mapping):
 
 ```
 PEER REVIEW ROUND
 
 You previously answered this council question. Now review two anonymized
-peer responses below. The labels "Response A" and "Response B" are local
-to this review only. You do NOT know which model wrote which response.
+peer responses below. You do NOT know which model wrote which response.
 
 For each response, score it on these dimensions (1-5):
 - Correctness: Is it technically accurate?
@@ -172,15 +171,15 @@ Then state:
 - BLIND SPOT: The most important thing this response missed or underweighted
 - BETTER THAN MINE: Yes or No — is this response overall better than your own?
 
-## Response A
+## Response [X]
 [anonymized content]
 
-## Response B
+## Response [Y]
 [anonymized content]
 
 Respond using this exact format:
 
-## Review of Response A
+## Review of Response [X]
 | Dimension | Score |
 |---|---|
 | Correctness | X |
@@ -192,7 +191,7 @@ STRONGEST POINT: ...
 BLIND SPOT: ...
 BETTER THAN MINE: Yes/No
 
-## Review of Response B
+## Review of Response [Y]
 [same format]
 ```
 
@@ -382,14 +381,19 @@ The final answer must synthesize, not average. Rules:
 ### Minority flags
 [Any important finding that only 1 of the 2 responding models raised]
 
+### Peer review insights
+[Key blind spots and strongest points surfaced during peer review — omit this section if peer review did not run]
+
 ### Judge scores
 | Dimension    | [Model A] | [Model B] | [Missing model] |
 |---|---|---|---|
-| Correctness  | X | X | — |
-| Completeness | X | X | — |
-| Groundedness | X | X | — |
-| Practicality | X | X | — |
-| Simplicity   | X | X | — |
+| Correctness  | X (peer: X) | X (peer: X) | — |
+| Completeness | X (peer: X) | X (peer: X) | — |
+| Groundedness | X (peer: X) | X (peer: X) | — |
+| Practicality | X (peer: X) | X (peer: X) | — |
+| Simplicity   | X (peer: X) | X (peer: X) | — |
+
+(peer scores omitted if peer review did not run)
 
 ### Judge notes
 [Only include if scoring materially affected the verdict]
