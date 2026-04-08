@@ -38,6 +38,7 @@ All three return the same structured schema so the judge can compare them direct
 
 ```
 ## Model Identity
+[(self-reported runtime model identity, or `UNKNOWN` if uncertain)]
 ## Answer
 ## Assumptions   (prefixed with "ASSUMING:")
 ## Risks         (ordered by severity: CRITICAL / HIGH / MEDIUM / LOW)
@@ -176,7 +177,7 @@ After installing via any method, confirm the council is working before using it 
    - **Cursor:** `/council-gpt-54 What is 2+2? (test only)`
    - **Claude Code:** `Use the council-gpt-54 agent: What is 2+2? (test only)`
 
-   Check the response to confirm it is running on GPT-5.4 and not a fallback model. The response will include a `## Model Identity` section that reports the model's actual identity.
+   Check the response to confirm it is running on GPT-5.4 and not a fallback model. The response will include a `## Model Identity` section that reports the model's self-reported runtime identity, or `UNKNOWN` if it cannot determine that reliably.
 
 2. **Repeat for the other two members** -- run the same check for `council-opus-46` (expect Claude Opus 4.6) and `council-gemini-31-pro` (expect Gemini 3.1 Pro).
 
@@ -184,7 +185,7 @@ After installing via any method, confirm the council is working before using it 
 
 4. **Run a full council** -- try a real question with `/ai-council`. Confirm the verdict includes responses from all 3 perspectives.
 
-> **Automatic verification:** The council workflow now checks model identities automatically. If two or more agents report the same model, you will see a warning in the output. This does not replace the manual check above for initial setup, but it catches fallback issues during normal use.
+> **Automatic verification:** The council workflow now checks model identities automatically. If two or more agents report the same model, or if multiple agents report `UNKNOWN`, you will see a warning in the output. This does not replace the manual check above for initial setup, but it catches likely fallback issues during normal use.
 
 ## Usage
 
@@ -237,7 +238,7 @@ Invoke one perspective directly when you want a specific lens:
 1. **Preflight** -- The skill infers the mode (`architecture`, `code-review`, or `implementation-choice`) from your request. If the request is ambiguous, it asks one short clarifying question. If the request is project-specific but missing relevant code/diff/architecture context, it asks for that first. If the attached context is too large or covers too many independent concerns to review groundedly, it asks you to narrow the scope before proceeding.
 2. **Normalize** -- Your question is rewritten into a structured brief (task, constraints, deliverable, rubric, mode). A separate internal `peer_review_setting` is resolved to `yes` or `no` before any subagent call. Attached code or diffs are included as primary context.
 3. **Parallel run** -- All 3 council members are launched as parallel subagents simultaneously. The skill stores the first-round outputs, identities, and agent IDs needed for peer review.
-4. **Model verification** -- Each agent reports its actual model identity; if duplicates are detected, or if multiple agents report `UNKNOWN`, a warning is surfaced.
+4. **Model verification** -- Each agent reports its self-reported runtime model identity; if duplicates are detected, or if multiple agents report `UNKNOWN`, a warning is surfaced.
 5. **Failure check** -- If a model fails or returns malformed output, the council continues with the remaining responses (minimum 2 to produce a verdict). A partial council is clearly labeled in the verdict.
 6. **Peer review** -- If all 3 first-round responses are available and peer review is enabled, each model reviews the other two under pseudonymous labels, scores them on 5 dimensions, identifies blind spots, and signals whether another response is better than its own.
 7. **Judge** -- The parent session scores each output on correctness, completeness, groundedness, practicality, simplicity; peer scores are shown alongside parent scores in the final verdict when available.
@@ -384,7 +385,7 @@ When a model fails to respond, the verdict is labeled at the top, peer review is
 
 - `gpt-5.4` and `claude-opus-4-6` require **Max Mode** on request-based Cursor plans
 - `gemini-3.1-pro` is available on standard plans
-- If a model is unavailable on your plan, Cursor falls back to a compatible model -- the council now detects this automatically via model identity verification and warns you in the output
+- If a model is unavailable on your plan, Cursor falls back to a compatible model -- the council now checks for this automatically via self-reported model identity and warns you in the output
 - The parent session (judge + synthesis) uses whatever model your active chat is running
 - For best results, use a strong model (Opus or GPT-5.4 class) as your parent session when running the full council
 

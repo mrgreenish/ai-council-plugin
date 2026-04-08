@@ -77,7 +77,7 @@ Task(subagent_type="council-opus-46",      prompt=<brief>, readonly=true)
 Task(subagent_type="council-gemini-31-pro", prompt=<brief>, readonly=true)
 ```
 
-**Preserve first-round artifacts:** Store the normalized brief, all 3 first-round responses, and each response's reported model identity. If `peer_review_setting` is `yes`, also store all 3 agent IDs — they are required for peer review (Step 3). Step 5 uses the stored first-round outputs directly rather than `resume`.
+**Preserve first-round artifacts:** Store the normalized brief, all 3 first-round responses, and each response's self-reported runtime model identity. If `peer_review_setting` is `yes`, also store all 3 agent IDs — they are required for peer review (Step 3). Step 5 uses the stored first-round outputs directly rather than `resume`.
 
 Council member roles:
 - `council-gpt-54` — adversarial analyst: edge cases, failure modes, strongest objections
@@ -96,15 +96,15 @@ Each subagent returns the same schema:
 
 ## Step 2a — Model identity verification
 
-After collecting responses, extract the `## Model Identity` field from each response.
+After collecting responses, extract the `## Model Identity` field from each response. Treat it as a self-reported runtime identity, not guaranteed ground truth.
 
 **Check for duplicates:**
-- If 2 or more agents report the same model identity, this means fallback occurred. Warn the user: "⚠️ WARNING: [agent-name] and [agent-name] both report running as [model]. This likely means Max Mode is not enabled. The council verdict may reflect a single model's perspective rather than true multi-model analysis."
+- If 2 or more agents report the same model identity, this strongly suggests fallback occurred. Warn the user: "⚠️ WARNING: [agent-name] and [agent-name] both self-reported running as [model]. This likely means Max Mode is not enabled. The council verdict may reflect a single model's perspective rather than true multi-model analysis."
 - If 2 or more agents report `UNKNOWN`, treat this as equivalent to the duplicate warning above: identity verification failed for multiple council members.
 - If exactly 1 model reports `UNKNOWN`, note it but proceed.
 - If all responding models report distinct, non-`UNKNOWN` identities, proceed normally.
 
-This check is informational only — it does not abort the workflow. The user decides whether to continue or fix their model configuration.
+This check is informational only — it does not abort the workflow. The user decides whether to continue or fix their model configuration. Because the value is self-reported, treat it as a useful signal rather than a cryptographic guarantee.
 
 ## Step 2b — Handle failures before judging
 
@@ -412,7 +412,7 @@ The final answer must synthesize, not average. Rules:
 
 ## Quality guardrails
 
-- Every council member must use "ASSUMING:" for assumptions and "UNKNOWN:" for gaps — do not let them hide uncertainty in confident-sounding prose
+- Every council member must use "ASSUMING:" for assumptions and "UNKNOWN:" for gaps, and must report self-identified runtime model identity rather than the assigned council slot label
 - For code-review mode: bugs and regressions must come before style findings in the final output
 - For architecture mode: the final answer must include trade-offs and a brief "why not the alternatives" section
 - The final verdict must be understandable without reading the judge table: recommendation, why, and next steps come first
