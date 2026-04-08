@@ -77,6 +77,8 @@ rm -rf /tmp/ai-council-plugin
 
 After copying, restart or reload your Cursor window. The council is immediately available in that project.
 
+> **Working inside the ai-council-plugin repo?** Run `bash scripts/install-cursor-project.sh` instead. It symlinks the canonical files into `.cursor/` so changes stay single-sourced and you don't need to re-copy after every edit.
+
 To update later, re-run the copy commands with the latest version of the repo.
 
 To uninstall, delete the copied files:
@@ -113,7 +115,7 @@ Click `Add plugin from local path` and select the folder you cloned:
 ~/cursor-plugins/ai-council
 ```
 
-Cursor reads the `.cursor-plugin/plugin.json` manifest and auto-discovers the `agents/`, `skills/`, and `commands/` folders.
+Cursor reads the `.cursor-plugin/plugin.json` manifest and loads the agents, skills, and commands listed in it.
 
 **Step 4: reload Cursor**
 
@@ -153,7 +155,7 @@ This installs:
 - `agents/council-opus-46.md` -> `~/.claude/agents/council-opus-46.md`
 - `agents/council-gemini-31-pro.md` -> `~/.claude/agents/council-gemini-31-pro.md`
 
-> **Note:** The `/ai-council` slash command is a Cursor-only feature. Claude Code does not support command files in the same way. After installing, invoke the council by asking Claude to use the `ai-council` skill, or invoke a council member directly: `/council-gpt-54`, `/council-opus-46`, `/council-gemini-31-pro`.
+> **Note:** After installing, invoke the council with `/ai-council` — the skill is slash-invocable in Claude Code. To use an individual council member directly, ask Claude in natural language, for example: "Use the council-gpt-54 agent to review this code."
 
 To uninstall, remove those files manually:
 
@@ -171,16 +173,16 @@ To update, re-run the install script after pulling the latest version of this re
 After installing via any method, confirm the council is working before using it on a real task:
 
 1. **Test a single council member** -- invoke one member with a simple question:
-   ```
-   /council-gpt-54 What is 2+2? (test only)
-   ```
-   Check the response header or model attribution to confirm it is running on GPT-5.4 and not a fallback model. The response will include a `## Model Identity` section that reports the model's actual identity.
+   - **Cursor:** `/council-gpt-54 What is 2+2? (test only)`
+   - **Claude Code:** `Use the council-gpt-54 agent: What is 2+2? (test only)`
+
+   Check the response to confirm it is running on GPT-5.4 and not a fallback model. The response will include a `## Model Identity` section that reports the model's actual identity.
 
 2. **Repeat for the other two members** -- run the same check for `council-opus-46` (expect Claude Opus 4.6) and `council-gemini-31-pro` (expect Gemini 3.1 Pro).
 
 3. **Confirm all 3 are distinct models** -- if all three responses come from the same model, you are running on a fallback. Check that your plan supports Max Mode (required for GPT-5.4 and Claude Opus 4.6).
 
-4. **Run a full council** -- try a real question with `/ai-council` (Cursor) or by asking the AI to use the `ai-council` skill (Claude). Confirm the verdict includes responses from all 3 perspectives.
+4. **Run a full council** -- try a real question with `/ai-council`. Confirm the verdict includes responses from all 3 perspectives.
 
 > **Automatic verification:** The council workflow now checks model identities automatically. If two or more agents report the same model, you will see a warning in the output. This does not replace the manual check above for initial setup, but it catches fallback issues during normal use.
 
@@ -194,7 +196,7 @@ After installing via any method, confirm the council is working before using it 
 /ai-council what is the best approach for this implementation?
 ```
 
-The command passes your request and any attached context to the `ai-council` skill, which handles the full workflow: mode inference, scope check, parallel council invocation, judging, escalation, and synthesis.
+The command passes your request and any attached context to the `ai-council` skill, which handles the full workflow: mode inference, context checks, parallel council invocation, judging, disagreement handling, and synthesis. If the request is project-specific but no relevant code, diff, or architecture context is attached, the skill asks for that context before running the council.
 
 ### Architecture examples
 
@@ -232,15 +234,15 @@ Invoke one perspective directly when you want a specific lens:
 
 ## How it works step by step
 
-1. **Preflight** -- The skill infers the mode (`architecture`, `code-review`, or `implementation-choice`) from your request. If the request is ambiguous, it asks one short clarifying question. If the attached context is too large or covers too many independent concerns to review groundedly, it asks you to narrow the scope before proceeding.
-2. **Normalize** -- Your question is rewritten into a structured brief (task, constraints, deliverable, rubric, mode, peer review setting). Attached code or diffs are included as primary context.
-3. **Parallel run** -- All 3 council members are launched as parallel subagents simultaneously; their agent IDs are preserved for peer review and the escalation round.
-4. **Model verification** -- Each agent reports its actual model identity; if duplicates are detected (indicating silent fallback), a warning is surfaced.
+1. **Preflight** -- The skill infers the mode (`architecture`, `code-review`, or `implementation-choice`) from your request. If the request is ambiguous, it asks one short clarifying question. If the request is project-specific but missing relevant code/diff/architecture context, it asks for that first. If the attached context is too large or covers too many independent concerns to review groundedly, it asks you to narrow the scope before proceeding.
+2. **Normalize** -- Your question is rewritten into a structured brief (task, constraints, deliverable, rubric, mode). A separate internal `peer_review_setting` is resolved to `yes` or `no` before any subagent call. Attached code or diffs are included as primary context.
+3. **Parallel run** -- All 3 council members are launched as parallel subagents simultaneously. The skill stores the first-round outputs, identities, and agent IDs needed for peer review.
+4. **Model verification** -- Each agent reports its actual model identity; if duplicates are detected, or if multiple agents report `UNKNOWN`, a warning is surfaced.
 5. **Failure check** -- If a model fails or returns malformed output, the council continues with the remaining responses (minimum 2 to produce a verdict). A partial council is clearly labeled in the verdict.
-6. **Peer review** -- Each model anonymously scores the other two responses on 5 dimensions, identifies blind spots, and signals whether another response is better than its own (skipped for implementation-choice mode).
-7. **Judge** -- The parent session scores each output on correctness, completeness, groundedness, practicality, simplicity; peer scores are shown alongside parent scores in the final verdict.
-8. **Escalation check** -- If models materially disagree (different recommendations, contradictory correctness claims, or an unaddressed CRITICAL/HIGH risk), each conflicting agent is *resumed* with a focused follow-up question in one parallel round. If the disagreement round does not converge, the conflict is surfaced explicitly under "Unresolved uncertainty".
-9. **Synthesis** -- The final Council Verdict adopts consensus, preserves minority risks, incorporates peer review insights, and calls out unresolved uncertainty.
+6. **Peer review** -- If all 3 first-round responses are available and peer review is enabled, each model reviews the other two under pseudonymous labels, scores them on 5 dimensions, identifies blind spots, and signals whether another response is better than its own.
+7. **Judge** -- The parent session scores each output on correctness, completeness, groundedness, practicality, simplicity; peer scores are shown alongside parent scores in the final verdict when available.
+8. **Disagreement round** -- If models materially disagree (different recommendations, contradictory correctness claims, or an unaddressed CRITICAL/HIGH risk), only the conflicting models are asked a fresh follow-up question in one parallel round. If that round does not converge, the conflict is surfaced explicitly together with what missing information would resolve it.
+9. **Synthesis** -- The final Council Verdict leads with a direct recommendation, explains why, gives next steps, preserves minority risks, incorporates peer review insights, and calls out unresolved uncertainty.
 
 ## Final output format
 
@@ -250,7 +252,9 @@ Invoke one perspective directly when you want a specific lens:
 ## Council Verdict
 
 ### Recommendation
-### Consensus points
+### Why
+### Next steps
+### Why not the alternatives  (architecture mode only)
 ### Key risks
 ### Minority flags
 ### Peer review insights (omitted if peer review did not run)
@@ -262,6 +266,7 @@ Invoke one perspective directly when you want a specific lens:
 | Groundedness | X (peer: X)    | X (peer: X)    | X (peer: X)    |
 | Practicality | X (peer: X)    | X (peer: X)    | X (peer: X)    |
 | Simplicity   | X (peer: X)    | X (peer: X)    | X (peer: X)    |
+### Judge notes  (only when scoring materially affects the verdict)
 ### Unresolved uncertainty
 ### Models consulted (with confidence scores)
 ```
@@ -296,10 +301,19 @@ Add Redis caching for the read-heavy public endpoints (product catalog, search r
 Defer caching for authenticated endpoints until the invalidation strategy is validated
 with the team. Start with a 60-second TTL and add cache-hit/miss metrics from day one.
 
-### Consensus points
-- Caching is justified given current API response times and read/write ratio
-- TTL-based expiration is the right starting point (not event-driven invalidation)
-- Monitoring and metrics must ship with the cache, not after
+### Why
+- Public endpoints are read-heavy enough to benefit from caching immediately
+- TTL-based expiration fits the current team and infrastructure better than event-driven invalidation
+- The strongest correctness concern applies to auth/personalized data, not to the initial public-endpoint rollout
+
+### Next steps
+- Roll out Redis only for product catalog and search results first
+- Ship hit/miss metrics and stale-data alerting in the first release
+- Keep authenticated and personalized endpoints uncached until invalidation semantics are reviewed with the team
+
+### Why not the alternatives
+- HTTP/CDN caching is simpler, but it only covers public cacheable traffic and does not solve the authenticated-path use case that motivated the request
+- Event-driven invalidation adds operational complexity before there is evidence that a simple TTL rollout is insufficient
 
 ### Key risks
 - CRITICAL (GPT-5.4): Cache invalidation for user permissions could cause stale
@@ -328,6 +342,10 @@ with the team. Start with a 60-second TTL and add cache-hit/miss metrics from da
 | Practicality | 3 (peer: 3)  | 5 (peer: 5)  | 4 (peer: 3.5) |
 | Simplicity   | 3 (peer: 3.5)| 4 (peer: 4)  | 4 (peer: 4)   |
 
+### Judge notes
+- Opus 4.6 led on practicality and groundedness, which made it the backbone of the final recommendation
+- GPT-5.4's CRITICAL invalidation warning materially changed the scope of the rollout, even though it did not change the recommendation to cache public endpoints
+
 ### Models consulted
 - GPT-5.4 (adversarial analyst) -- confidence: 6/10
 - Claude Opus 4.6 (production quality) -- confidence: 8/10
@@ -336,7 +354,7 @@ with the team. Start with a 60-second TTL and add cache-hit/miss metrics from da
 
 **Partial council (one model unavailable):**
 
-When a model fails to respond, the verdict is labeled at the top and the judge table uses `--` for the missing model's column:
+When a model fails to respond, the verdict is labeled at the top, peer review is skipped, and the judge table uses `—` for the missing model's column:
 
 ```
 ## Council Verdict
@@ -344,17 +362,20 @@ When a model fails to respond, the verdict is labeled at the top and the judge t
 > Partial council: [Missing model] did not respond. Verdict is based on 2 of 3 perspectives.
 
 ### Recommendation
-### Consensus points  (what both responding models agreed on)
+### Why
+### Next steps
+### Why not the alternatives  (architecture mode only)
 ### Key risks
 ### Minority flags
 ### Judge scores
 | Dimension    | [Model A] | [Model B] | [Missing model] |
 |---|---|---|---|
-| Correctness  | X | X | -- |
-| Completeness | X | X | -- |
-| Groundedness | X | X | -- |
-| Practicality | X | X | -- |
-| Simplicity   | X | X | -- |
+| Correctness  | X | X | — |
+| Completeness | X | X | — |
+| Groundedness | X | X | — |
+| Practicality | X | X | — |
+| Simplicity   | X | X | — |
+### Judge notes
 ### Unresolved uncertainty
 ### Models consulted
 ```
@@ -383,16 +404,17 @@ ai-council-plugin/
 ├── commands/
 │   └── ai-council.md        # Thin /ai-council command entrypoint
 ├── scripts/
-│   └── install-claude.sh    # Claude install script
+│   ├── install-claude.sh           # Claude install script
+│   └── install-cursor-project.sh  # Cursor project-local symlink helper
 └── README.md
 ```
 
 ## Design philosophy and trade-offs
 
-This plugin is entirely markdown -- no code, no dependencies, no build step. This is a deliberate choice with real trade-offs:
+This plugin is markdown-first -- no runtime dependencies, no build step. The orchestration logic lives entirely in human-readable markdown files. This is a deliberate choice with real trade-offs:
 
-**Strengths of the zero-code approach:**
-- Works immediately in any Cursor or Claude Code project without installation complexity
+**Strengths of the markdown-first approach:**
+- Works immediately in any Cursor or Claude Code project without build complexity
 - No dependency management, no version conflicts, no build pipeline
 - Every part of the system is human-readable and editable
 - Portable across Cursor and Claude Code with minimal adaptation

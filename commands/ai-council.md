@@ -5,6 +5,8 @@ description: Run the AI Council on any high-stakes question. Invokes 3 specialis
 
 Run the AI Council on the following request using the `ai-council` skill.
 
+If the request depends on project-specific code, a diff, or an existing architecture and no relevant files, code, or diff are attached, ask the user for that context before running the council.
+
 The request is: {{input}}
 
 Include any attached files, selected code, or open diffs as context for the council.

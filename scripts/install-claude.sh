@@ -3,8 +3,9 @@
 # Copies the council skill and agent files into Claude user directories.
 # Run from the ai-council-plugin root: bash scripts/install-claude.sh
 #
-# Note: The /ai-council slash command is a Cursor-only feature.
-# Claude Code users invoke the council via the ai-council skill directly.
+# Invoke the council with /ai-council (the skill is slash-invocable in Claude Code).
+# To use individual council members, ask Claude in natural language, e.g.
+#   "Use the council-gpt-54 agent to review this code."
 
 set -euo pipefail
 
@@ -60,11 +61,9 @@ echo ""
 echo "Done. The AI Council is now available in Claude."
 echo ""
 echo "Usage (Claude Code):"
-echo "  Ask Claude to use the ai-council skill for high-stakes questions."
-echo "  Or invoke a council member directly:"
-echo "    /council-gpt-54, /council-opus-46, /council-gemini-31-pro"
-echo ""
-echo "Note: The /ai-council command is Cursor-only and is NOT installed by this script."
+echo "  Invoke the council with: /ai-council your question here"
+echo "  To use an individual council member, ask Claude in natural language:"
+echo "    \"Use the council-gpt-54 agent to review this code.\""
 echo ""
 echo "To uninstall:"
 echo "  rm -rf ~/.claude/skills/ai-council"
