@@ -129,15 +129,15 @@ Each model reviews only the responses that are NOT its own. Launch all 3 as para
 ```
 Task(subagent_type="council-gpt-54",
      prompt=<peer_review_brief with Response B + Response C>,
-     resume=<agent_id_from_step2>)
+     resume=<agent_id_gpt>)
 
 Task(subagent_type="council-opus-46",
      prompt=<peer_review_brief with Response A + Response C>,
-     resume=<agent_id_from_step2>)
+     resume=<agent_id_opus>)
 
 Task(subagent_type="council-gemini-31-pro",
      prompt=<peer_review_brief with Response A + Response B>,
-     resume=<agent_id_from_step2>)
+     resume=<agent_id_gemini>)
 ```
 
 > **Why `resume` matters:** The model retains context of the original brief and its own first-round analysis. It can evaluate the other responses with full problem context without needing the brief repeated.
