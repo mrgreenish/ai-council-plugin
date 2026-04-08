@@ -295,6 +295,7 @@ The final answer must synthesize, not average. Rules:
 **Partial council (2 of 3 models responded):**
 - Use the same synthesis rules above, but scope all consensus/agreement language to "both responding models" rather than "all 3".
 - The judge scores table uses only the 2 responding models' columns; mark the missing model's column as `—`.
+- Do not include `### Peer review insights` or any `(peer: X)` placeholders, because Step 3 is always skipped when fewer than 3 models responded.
 - Add a visible note at the top of the verdict: `> Partial council: [Model name] did not respond. Verdict is based on 2 of 3 perspectives.`
 
 ## Final output format
@@ -381,19 +382,14 @@ The final answer must synthesize, not average. Rules:
 ### Minority flags
 [Any important finding that only 1 of the 2 responding models raised]
 
-### Peer review insights
-[Key blind spots and strongest points surfaced during peer review — omit this section if peer review did not run]
-
 ### Judge scores
 | Dimension    | [Model A] | [Model B] | [Missing model] |
 |---|---|---|---|
-| Correctness  | X (peer: X) | X (peer: X) | — |
-| Completeness | X (peer: X) | X (peer: X) | — |
-| Groundedness | X (peer: X) | X (peer: X) | — |
-| Practicality | X (peer: X) | X (peer: X) | — |
-| Simplicity   | X (peer: X) | X (peer: X) | — |
-
-(peer scores omitted if peer review did not run)
+| Correctness  | X | X | — |
+| Completeness | X | X | — |
+| Groundedness | X | X | — |
+| Practicality | X | X | — |
+| Simplicity   | X | X | — |
 
 ### Judge notes
 [Only include if scoring materially affected the verdict]
