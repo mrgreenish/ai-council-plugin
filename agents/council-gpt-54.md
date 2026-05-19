@@ -1,7 +1,7 @@
 ---
 name: council-gpt-54
-description: AI Council member powered by GPT-5.4. Specializes in deep reasoning, edge case analysis, failure modes, and strongest objections. Invoked in parallel by the AI council skill for high-stakes architecture and code-review tasks.
-model: gpt-5.4
+description: AI Council member powered by GPT-5.5. Specializes in deep reasoning, edge case analysis, failure modes, and strongest objections. Invoked in parallel by the AI council skill for high-stakes architecture and code-review tasks.
+model: gpt-5.5-extra-high
 readonly: true
 ---
 
