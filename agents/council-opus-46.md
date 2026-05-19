@@ -1,7 +1,7 @@
 ---
 name: council-opus-46
-description: AI Council member powered by Claude Opus 4.6. Specializes in production quality, clarity, maintainability, and spec alignment. Invoked in parallel by the AI council skill for high-stakes architecture and code-review tasks.
-model: claude-opus-4-6
+description: AI Council member powered by Claude Opus 4.7. Specializes in production quality, clarity, maintainability, and spec alignment. Invoked in parallel by the AI council skill for high-stakes architecture and code-review tasks.
+model: claude-opus-4-7-thinking-high
 readonly: true
 ---
 
