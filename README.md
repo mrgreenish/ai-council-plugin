@@ -13,7 +13,7 @@ Your question
 AI Council Skill (normalizes prompt into a brief)
      |
      |--- council-gpt-54         (GPT-5.5 -- adversarial analyst)
-     |--- council-opus-46        (Claude Opus 4.7 -- production quality)
+     |--- council-opus-46        (Claude Opus 4.8 -- production quality)
      '--- council-gemini-31-pro  (Gemini 3.1 Pro -- breadth & alternatives)
                 |
                 v
@@ -31,7 +31,7 @@ AI Council Skill (normalizes prompt into a brief)
 | Agent | Model | Role |
 |---|---|---|
 | `council-gpt-54` | `gpt-5.5-extra-high` | Adversarial analyst -- edge cases, failure modes, strongest objections |
-| `council-opus-46` | `claude-opus-4-7-thinking-high` | Production quality advocate -- correctness, clarity, maintainability |
+| `council-opus-46` | `claude-opus-4-8-thinking-max` | Production quality advocate -- correctness, clarity, maintainability |
 | `council-gemini-31-pro` | `gemini-3.1-pro` | Breadth analyst -- alternatives, hidden assumptions, cross-cutting concerns |
 
 All three return the same structured schema so the judge can compare them directly:
@@ -179,9 +179,9 @@ After installing via any method, confirm the council is working before using it 
 
    Check the response to confirm it is running on GPT-5.5 and not a fallback model. The response will include a `## Model Identity` section that reports the model's self-reported runtime identity, or `UNKNOWN` if it cannot determine that reliably.
 
-2. **Repeat for the other two members** -- run the same check for `council-opus-46` (expect Claude Opus 4.7) and `council-gemini-31-pro` (expect Gemini 3.1 Pro).
+2. **Repeat for the other two members** -- run the same check for `council-opus-46` (expect Claude Opus 4.8) and `council-gemini-31-pro` (expect Gemini 3.1 Pro).
 
-3. **Confirm all 3 are distinct models** -- if all three responses come from the same model, you are running on a fallback. Check that your plan supports Max Mode (required for GPT-5.5 and Claude Opus 4.7).
+3. **Confirm all 3 are distinct models** -- if all three responses come from the same model, you are running on a fallback. Check that your plan supports Max Mode (required for GPT-5.5 and Claude Opus 4.8).
 
 4. **Run a full council** -- try a real question with `/ai-council`. Confirm the verdict includes responses from all 3 perspectives.
 
@@ -260,7 +260,7 @@ Invoke one perspective directly when you want a specific lens:
 ### Minority flags
 ### Peer review insights (omitted if peer review did not run)
 ### Judge scores
-| Dimension    | GPT-5.5        | Opus 4.7       | Gemini 3.1 Pro |
+| Dimension    | GPT-5.5        | Opus 4.8       | Gemini 3.1 Pro |
 |---|---|---|---|
 | Correctness  | X (peer: X)    | X (peer: X)    | X (peer: X)    |
 | Completeness | X (peer: X)    | X (peer: X)    | X (peer: X)    |
@@ -283,12 +283,12 @@ Invoke one perspective directly when you want a specific lens:
 **What each model said (summarized):**
 
 - **GPT-5.5** recommended adding Redis but flagged cache invalidation as a CRITICAL risk, warning that stale data in the user permissions cache could cause authorization bugs. Confidence: 6/10.
-- **Opus 4.7** recommended Redis with a TTL-based strategy, emphasizing it fits the existing infrastructure patterns and is straightforward to operate. Flagged the lack of a cache monitoring story as a HIGH risk. Confidence: 8/10.
+- **Opus 4.8** recommended Redis with a TTL-based strategy, emphasizing it fits the existing infrastructure patterns and is straightforward to operate. Flagged the lack of a cache monitoring story as a HIGH risk. Confidence: 8/10.
 - **Gemini 3.1 Pro** recommended considering HTTP-level caching (CDN or reverse proxy) as an alternative before committing to Redis, noting that Redis adds operational complexity that may not be justified by current traffic. Confidence: 7/10.
 
 **Peer review highlights:**
 
-- Both GPT-5.5 and Gemini 3.1 Pro marked Opus 4.7's response as "BETTER THAN MINE" for practicality
+- Both GPT-5.5 and Gemini 3.1 Pro marked Opus 4.8's response as "BETTER THAN MINE" for practicality
 - GPT-5.5 identified a blind spot in Gemini's response: the CDN alternative does not help with authenticated/personalized endpoints
 - Gemini flagged that GPT-5.5's invalidation concerns, while valid, assumed a write-heavy workload that may not match the actual use case
 
@@ -319,7 +319,7 @@ with the team. Start with a 60-second TTL and add cache-hit/miss metrics from da
 ### Key risks
 - CRITICAL (GPT-5.5): Cache invalidation for user permissions could cause stale
   authorization decisions. Mitigated by excluding auth endpoints from initial rollout.
-- HIGH (Opus 4.7): No cache monitoring story -- stale data failures will be invisible
+- HIGH (Opus 4.8): No cache monitoring story -- stale data failures will be invisible
   without hit/miss metrics and alerting.
 
 ### Minority flags
@@ -328,14 +328,14 @@ with the team. Start with a 60-second TTL and add cache-hit/miss metrics from da
   operational burden becomes a concern.
 
 ### Peer review insights
-- Opus 4.7's response was rated strongest on practicality by both peers
+- Opus 4.8's response was rated strongest on practicality by both peers
 - GPT-5.5's cache invalidation concern was validated by peers but scoped: it matters most
   for auth/personalized data, less for public read endpoints
 - Gemini's CDN alternative was noted as a valid fallback but not a replacement for the
   primary use case
 
 ### Judge scores
-| Dimension    | GPT-5.5      | Opus 4.7     | Gemini 3.1 Pro |
+| Dimension    | GPT-5.5      | Opus 4.8     | Gemini 3.1 Pro |
 |---|---|---|---|
 | Correctness  | 4 (peer: 4)  | 5 (peer: 4.5)| 4 (peer: 3.5) |
 | Completeness | 3 (peer: 3.5)| 4 (peer: 4.5)| 4 (peer: 4)   |
@@ -344,12 +344,12 @@ with the team. Start with a 60-second TTL and add cache-hit/miss metrics from da
 | Simplicity   | 3 (peer: 3.5)| 4 (peer: 4)  | 4 (peer: 4)   |
 
 ### Judge notes
-- Opus 4.7 led on practicality and groundedness, which made it the backbone of the final recommendation
+- Opus 4.8 led on practicality and groundedness, which made it the backbone of the final recommendation
 - GPT-5.5's CRITICAL invalidation warning materially changed the scope of the rollout, even though it did not change the recommendation to cache public endpoints
 
 ### Models consulted
 - GPT-5.5 (adversarial analyst) -- confidence: 6/10
-- Claude Opus 4.7 (production quality) -- confidence: 8/10
+- Claude Opus 4.8 (production quality) -- confidence: 8/10
 - Gemini 3.1 Pro (breadth analyst) -- confidence: 7/10
 ```
 
@@ -383,7 +383,7 @@ When a model fails to respond, the verdict is labeled at the top, peer review is
 
 ## Model availability notes
 
-- `gpt-5.5-extra-high` and `claude-opus-4-7-thinking-high` require **Max Mode** on request-based Cursor plans
+- `gpt-5.5-extra-high` and `claude-opus-4-8-thinking-max` require **Max Mode** on request-based Cursor plans
 - `gemini-3.1-pro` is available on standard plans
 - If a model is unavailable on your plan, Cursor falls back to a compatible model -- the council now checks for this automatically via self-reported model identity and warns you in the output
 - The parent session (judge + synthesis) uses whatever model your active chat is running
@@ -397,7 +397,7 @@ ai-council-plugin/
 │   └── plugin.json          # Cursor plugin manifest
 ├── agents/
 │   ├── council-gpt-54.md    # GPT-5.5 adversarial analyst
-│   ├── council-opus-46.md   # Claude Opus 4.7 production quality
+│   ├── council-opus-46.md   # Claude Opus 4.8 production quality
 │   └── council-gemini-31-pro.md  # Gemini 3.1 Pro breadth analyst
 ├── skills/
 │   └── ai-council/

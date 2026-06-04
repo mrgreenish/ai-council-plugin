@@ -1,6 +1,6 @@
 ---
 name: ai-council
-description: Runs 3 specialist AI subagents in parallel (GPT-5.5, Claude Opus 4.7, Gemini 3.1 Pro) for high-stakes decisions, then synthesizes the best final answer. Use when asked for "best possible answer", architecture decisions, code review, or ambiguous implementation choices.
+description: Runs 3 specialist AI subagents in parallel (GPT-5.5, Claude Opus 4.8, Gemini 3.1 Pro) for high-stakes decisions, then synthesizes the best final answer. Use when asked for "best possible answer", architecture decisions, code review, or ambiguous implementation choices.
 ---
 
 # AI Council
@@ -329,7 +329,7 @@ The final answer must synthesize, not average. Rules:
 [Key blind spots and strongest points surfaced during peer review — omit this section if peer review did not run]
 
 ### Judge scores
-| Dimension    | GPT-5.5 | Opus 4.7 | Gemini 3.1 Pro |
+| Dimension    | GPT-5.5 | Opus 4.8 | Gemini 3.1 Pro |
 |---|---|---|---|
 | Correctness  | X (peer: X) | X (peer: X) | X (peer: X) |
 | Completeness | X (peer: X) | X (peer: X) | X (peer: X) |
@@ -350,7 +350,7 @@ The final answer must synthesize, not average. Rules:
 
 ### Models consulted
 - GPT-5.5 (adversarial analyst) — confidence: X/10
-- Claude Opus 4.7 (production quality) — confidence: X/10
+- Claude Opus 4.8 (production quality) — confidence: X/10
 - Gemini 3.1 Pro (breadth analyst) — confidence: X/10
 [Note any model that failed to respond or reported unexpected identity]
 ```
